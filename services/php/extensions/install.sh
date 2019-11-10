@@ -52,7 +52,7 @@ isPhpVersionGreaterOrEqual()
 # Install extension from package file(.tgz),
 # For example:
 #
-# installExtensionFromTgz redis-5.0.2
+# installExtensionFromTgz redis-4.1.1
 #
 # Param 1: Package name with version
 # Param 2: enable options
@@ -429,7 +429,7 @@ if [[ -z "${EXTENSIONS##*,redis,*}" ]]; then
 fi
 
 if [[ -z "${EXTENSIONS##*,apcu,*}" ]]; then
-    echo "---------- Install apcu ----------"
+    echo "---------- Install redis ----------"
     installExtensionFromTgz apcu-5.1.17
 fi
 
@@ -508,20 +508,4 @@ if [[ -z "${EXTENSIONS##*,zip,*}" ]]; then
     docker-php-ext-configure zip --with-libzip=/usr/include
 
 	docker-php-ext-install ${MC} zip
-fi
-
-if [[ -z "${EXTENSIONS##*,xhprof,*}" ]]; then
-    echo "---------- Install XHProf ----------"
-
-    isPhpVersionGreaterOrEqual 7 0
-
-    if [[ "$?" = "1" ]]; then
-        mkdir xhprof \
-        && tar -xf xhprof-2.1.0.tgz -C xhprof --strip-components=1 \
-        && ( cd xhprof/extension/ && phpize && ./configure  && make ${MC} && make install ) \
-        && docker-php-ext-enable xhprof
-    else
-       echo "---------- PHP Version>= 7.0----------"
-    fi
-
 fi
