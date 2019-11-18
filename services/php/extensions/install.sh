@@ -492,10 +492,15 @@ fi
 
 if [[ -z "${EXTENSIONS##*,swoole,*}" ]]; then
     echo "---------- Install swoole ----------"
+    isPhpVersionGreaterOrEqual 7 1
+    isPHP71=$?
     isPhpVersionGreaterOrEqual 7 0
+    isPHP70=$?
 
-    if [[ "$?" = "1" ]]; then
+    if [[ "$isPHP71" = "1" ]]; then
         installExtensionFromTgz swoole-4.4.2
+    elif [[ "$isPHP70" = "1" ]]; then
+        installExtensionFromTgz swoole-4.3.3
     else
         installExtensionFromTgz swoole-2.0.11
     fi
