@@ -1,0 +1,14 @@
+FROM node:10.15.3-alpine
+
+WORKDIR /www
+
+COPY package*.json ./
+
+COPY . ./
+
+# change registry & install
+RUN npm config set registry https://registry.npm.taobao.org \
+	&& npm install \
+	&& mkdir src
+
+CMD [ "npm", "run", "serve"]
