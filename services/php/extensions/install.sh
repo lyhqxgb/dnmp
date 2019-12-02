@@ -425,7 +425,9 @@ fi
 
 if [[ -z "${EXTENSIONS##*,redis,*}" ]]; then
     echo "---------- Install redis ----------"
-    installExtensionFromTgz redis-5.0.2
+        # installExtensionFromTgz redis-5.0.2
+        # 由于项目redis版本较低，使用5.0.2扩展会有问题，改用旧版扩展
+        installExtensionFromTgz redis-3.1.3
 fi
 
 if [[ -z "${EXTENSIONS##*,apcu,*}" ]]; then
