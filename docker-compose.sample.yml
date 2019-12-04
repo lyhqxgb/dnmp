@@ -1,5 +1,42 @@
 version: "3"
 services:
+  node:
+    build:
+    #  context: ./services/node
+      context: ${NODE_DOCKER_FILE}
+    image: mynode:v1
+    container_name: node
+    ports:
+      - "${NODE_HTTP_HOST_PORT}:8082"
+    expose:
+      - 8082
+    extra_hosts:
+      - "local.xiaobai.com:192.168.99.100"
+    volumes:
+      - ${SHARE_ROOT}${NODE_SOURCE_SRC}:/www/src
+      - ${SHARE_ROOT}${NODE_SOURCE_PUBLIC}:/www/public
+    restart: always
+    networks:
+      - default
+
+  nodeTuku:
+    build:
+      context: ./services/node_tuku
+    image: node_tuku:v1
+    container_name: node_tuku
+    ports:
+      - "${NODE_TUKU_PORT}:9080"
+    expose:
+      - 9080
+    extra_hosts:
+      - "local.tuku.com:192.168.99.100"
+    volumes:
+      - ${SHARE_ROOT}${NODE_TUKU_SOURCE_SRC}:/www/src
+      - ${SHARE_ROOT}${NODE_TUKU_SOURCE_PUBLIC}:/www/public
+    restart: always
+    networks:
+      - default
+
   nginx:
     build:
       context: ./services/nginx
@@ -7,18 +44,19 @@ services:
         NGINX_VERSION: ${NGINX_VERSION}
         CONTAINER_PACKAGE_URL: ${CONTAINER_PACKAGE_URL}
         NGINX_INSTALL_APPS: ${NGINX_INSTALL_APPS}
+    image: dnginx:v1
     container_name: nginx
     ports:
       - "${NGINX_HTTP_HOST_PORT}:80"
       - "${NGINX_HTTPS_HOST_PORT}:443"
     volumes:
-      - ${SOURCE_DIR}:/www/:rw
-      - ${NGINX_SSL_CERTIFICATE_DIR}:/ssl:rw
-      - ${NGINX_CONFD_DIR}:/etc/nginx/conf.d/:rw
-      - ${NGINX_CONF_FILE}:/etc/nginx/nginx.conf:ro
-      - ${NGINX_FASTCGI_PHP_CONF}:/etc/nginx/fastcgi-php.conf:ro
-      - ${NGINX_FASTCGI_PARAMS}:/etc/nginx/fastcgi_params:ro
-      - ${NGINX_LOG_DIR}:/var/log/nginx/:rw
+      - ${SHARE_ROOT}${SOURCE_DIR}:/www/:rw
+      - ${SHARE_ROOT}${NGINX_SSL_CERTIFICATE_DIR}:/ssl:rw
+      - ${SHARE_ROOT}${NGINX_CONFD_DIR}:/etc/nginx/conf.d/:rw
+      - ${SHARE_ROOT}${NGINX_CONF_FILE}:/etc/nginx/nginx.conf:ro
+      - ${SHARE_ROOT}${NGINX_FASTCGI_PHP_CONF}:/etc/nginx/fastcgi-php.conf:ro
+      - ${SHARE_ROOT}${NGINX_FASTCGI_PARAMS}:/etc/nginx/fastcgi_params:ro
+      - ${SHARE_ROOT}${NGINX_LOG_DIR}:/var/log/nginx/:rw
     environment:
       TZ: "$TZ"
     restart: always
@@ -33,17 +71,20 @@ services:
         CONTAINER_PACKAGE_URL: ${CONTAINER_PACKAGE_URL}
         PHP_EXTENSIONS: ${PHP_EXTENSIONS}
         TZ: "$TZ"
+    image: dphp:v1
     container_name: php
     expose:
-      - 9501
+      - 9000
     extra_hosts:
-      - "www.site1.com:172.17.0.1"
+      - "local.xiaobai.com:192.168.99.100"
+      - "local.tuku.com:192.168.99.100"
+      - "local.cropimage.com:192.168.99.100"
     volumes:
-      - ${SOURCE_DIR}:/www/:rw
-      - ${PHP_PHP_CONF_FILE}:/usr/local/etc/php/php.ini:ro
-      - ${PHP_FPM_CONF_FILE}:/usr/local/etc/php-fpm.d/www.conf:rw
-      - ${PHP_LOG_DIR}:/var/log/php
-      - ${DATA_DIR}/composer:/tmp/composer
+      - ${SHARE_ROOT}${SOURCE_DIR}:/www/:rw
+      - ${SHARE_ROOT}${PHP_PHP_CONF_FILE}:/usr/local/etc/php/php.ini:ro
+      - ${SHARE_ROOT}${PHP_FPM_CONF_FILE}:/usr/local/etc/php-fpm.d/www.conf:rw
+      - ${SHARE_ROOT}${PHP_LOG_DIR}:/var/log/php
+      - ${SHARE_ROOT}${DATA_DIR}/composer:/tmp/composer
     restart: always
     cap_add:
       - SYS_PTRACE
@@ -100,12 +141,14 @@ services:
     ports:
       - "${MYSQL_HOST_PORT}:3306"
     volumes:
-      - ${MYSQL_CONF_FILE}:/etc/mysql/conf.d/mysql.cnf:ro
-      - ${DATA_DIR}/mysql:/var/lib/mysql/:rw
+      - ${SHARE_ROOT}${MYSQL_CONF_FILE}:/etc/mysql/conf.d/mysql.cnf:ro
+      - ${SHARE_ROOT}${MYSQL_DATA_DIR}/mysql:/var/lib/mysql/:rw
     restart: always
+    #command: ls -l /var/lib/mysql
     networks:
       - default
     environment:
+      DATA_DIR: "/var/lib/mysql"
       MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
       TZ: "$TZ"
 
@@ -143,20 +186,19 @@ services:
 #    networks:
 #      - default
 
-#  redis:
-#    image: redis:${REDIS_VERSION}
-#    container_name: redis
-#    ports:
-#      - "${REDIS_HOST_PORT}:6379"
-#    volumes:
-#      - ${REDIS_CONF_FILE}:/etc/redis.conf:ro
-#      - ${DATA_DIR}/redis:/data/:rw
-#    restart: always
-#    entrypoint: ["redis-server", "/etc/redis.conf"]
-#    environment:
-#      TZ: "$TZ"
-#    networks:
-#      - default
+  redis:
+    image: redis:${REDIS_VERSION}
+    container_name: redis
+    ports:
+      - "${REDIS_HOST_PORT}:6379"
+    volumes:
+      - ${REDIS_CONF_FILE}:/etc/redis.conf:ro
+    restart: always
+    entrypoint: ["redis-server", "/etc/redis.conf"]
+    environment:
+      TZ: "$TZ"
+    networks:
+      - default
 
 #  memcached:
 #    image: memcached:${MEMCACHED_VERSION}
@@ -182,32 +224,32 @@ services:
 #    networks:
 #          - default
 
-#  phpmyadmin:
-#    image: phpmyadmin/phpmyadmin:latest
-#    container_name: phpmyadmin
-#    ports:
-#      - "${PHPMYADMIN_HOST_PORT}:80"
-#    volumes:
-#      - ${PHPMYADMIN_USER_CONF_FILE}:/etc/phpmyadmin/config.user.inc.php:ro
-#      - ${PHPMYADMIN_PHP_CONF_FILE}:/usr/local/etc/php/conf.d/php-phpmyadmin.ini:ro
-#    networks:
-#      - default
-#    environment:
-#      - PMA_HOST=mysql
-#      - PMA_PORT=3306
-#      - TZ=$TZ
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    ports:
+      - "${PHPMYADMIN_HOST_PORT}:80"
+    volumes:
+      - ${PHPMYADMIN_USER_CONF_FILE}:/etc/phpmyadmin/config.user.inc.php:ro
+      - ${PHPMYADMIN_PHP_CONF_FILE}:/usr/local/etc/php/conf.d/php-phpmyadmin.ini:ro
+    networks:
+      - default
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - TZ=$TZ
 
-#  phpredisadmin:
-#    image: erikdubbelboer/phpredisadmin:latest
-#    container_name: phpredisadmin
-#    ports:
-#      - "${REDISMYADMIN_HOST_PORT}:80"
-#    networks:
-#      - default
-#    environment:
-#      - REDIS_1_HOST=redis
-#      - REDIS_1_PORT=6379
-#      - TZ=$TZ
+  phpredisadmin:
+    image: erikdubbelboer/phpredisadmin:latest
+    container_name: phpredisadmin
+    ports:
+      - "${REDISMYADMIN_HOST_PORT}:80"
+    networks:
+      - default
+    environment:
+      - REDIS_1_HOST=redis
+      - REDIS_1_PORT=6379
+      - TZ=$TZ
 
 #  mongodb:
 #    image: mongo:${MONGODB_VERSION}
